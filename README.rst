@@ -15,13 +15,23 @@ Swagger Fuzzer
 
 Swagger Fuzzer helps you do fuzzing testing on your Swagger APIs.
 
-* Free software: ISC license
+* Free software: MIT License
 * Documentation: https://swagger_fuzzer.readthedocs.org.
 
-Features
---------
+Usage
+-----
 
-* TODO
+Install swagger-fuzzer via pip:
+
+.. code:: shell
+
+    pip install https://github.com/Lothiraldan/swagger-fuzzer/archive/master.zip
+
+Point it to your swagger specification:
+
+.. code:: shell
+
+    swagger-fuzzer http://localhost:80/v2/swagger.json
 
 Credits
 ---------

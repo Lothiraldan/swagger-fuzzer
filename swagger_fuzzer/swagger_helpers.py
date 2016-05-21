@@ -1,3 +1,6 @@
+""" Helpers for swagger specifications
+"""
+
 import hypothesis.strategies as st
 from hypothesis.extra.datetime import datetimes
 
@@ -12,6 +15,8 @@ SWAGGER_FORMAT_MAPPING = {
 
 
 def _is_swagger_parameter(dict):
+    """ Check if the parameter dict is a valid swagger parameter
+    """
     return dict.get('type') or dict.get('schema') or dict.get('$ref')
 
 
