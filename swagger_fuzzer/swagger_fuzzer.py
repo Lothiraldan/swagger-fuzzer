@@ -3,7 +3,6 @@
 """
 import json
 import argparse
-from datetime import datetime
 from urllib.parse import urlparse, urlunparse
 
 import requests
@@ -15,6 +14,7 @@ from swagger_spec_validator.util import get_validator
 from .swagger_helpers import CustomTransformation
 from .strategy import data
 from .validators import VALIDATORS
+from .utils import CustomJsonEncoder
 
 parser = argparse.ArgumentParser()
 parser.add_argument('spec_url', help="The Swagger spec url")
@@ -42,16 +42,6 @@ def do(spec_url, iterations):
 
     s = requests.Session()
 
-
-    class CustomJsonEncoder(json.JSONEncoder):
-
-        def default(self, o):
-            if isinstance(o, datetime):
-                return o.isoformat()
-
-            return super().default(o)
-
-
     def get_ref(ref):
         assert ref.startswith('#/')
         splitted = ref.lstrip('#/').split('/')
@@ -63,20 +53,17 @@ def do(spec_url, iterations):
 
         return referenced_to
 
-
     def get_item_path_acceptable_format(path_item):
         if path_item.get('consumes'):
             return path_item['consumes']
 
         return SPEC.get('consumes')
 
-
     def _get_filtered_parameter(path_item, in_):
         parameters = path_item.get('parameters')
         filtered_params = [p for p in parameters if p['in'] == in_]
         non_converted_params = {p['name']: p for p in filtered_params}
         return CustomTransformation(get_ref).transform(non_converted_params)
-
 
     @given(data())
     @settings(max_examples=iterations)
