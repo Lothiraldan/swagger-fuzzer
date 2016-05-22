@@ -4,18 +4,16 @@
 import sys
 import json
 from datetime import datetime
-
 from urllib.parse import urlparse, urlunparse
 
 import requests
+import hypothesis.strategies as st
+from furl import furl
+from hypothesis import given, settings, assume
 from swagger_spec_validator.util import get_validator
 
-from hypothesis import given, settings, assume
-import hypothesis.strategies as st
-
-from furl import furl
-
 from .swagger_helpers import CustomTransformation
+from .strategy import data
 
 SPEC_URL = sys.argv[1]
 PARSED_HOST = urlparse(SPEC_URL)
@@ -32,7 +30,7 @@ SPEC_HOST = urlunparse(list(PARSED_HOST)[:2] + [SPEC['basePath']] + ['', '', '']
 
 s = requests.Session()
 
-STANDARDS_STATUS_CODE = [200, 404, 405, 500]
+STANDARDS_STATUS_CODE = [200, 405, 404]
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -101,24 +99,24 @@ VALIDATORS = [
 ]
 
 
-@given(st.data())
-@settings(max_examples=10000)
+@given(data())
+@settings(max_examples=100000)
 def swagger_fuzzer(data):
-    endpoint_path = data.draw(st.sampled_from(SPEC['paths'].keys()))
+    endpoint_path = data.draw(st.sampled_from(SPEC['paths'].keys()), 'URL')
     endpoint = SPEC['paths'][endpoint_path]
 
-    method_name = data.draw(st.sampled_from(endpoint.keys()))
+    method_name = data.draw(st.sampled_from(endpoint.keys()), 'METHOD')
     endpoint = endpoint[method_name]
 
     path_params = _get_filtered_parameter(endpoint, 'path')
-    path_args = data.draw(st.fixed_dictionaries(path_params))
+    path_args = data.draw(st.fixed_dictionaries(path_params), 'QUERY_STRING')
 
     query_params = _get_filtered_parameter(endpoint, 'query')
-    query_args = data.draw(st.fixed_dictionaries(query_params))
+    query_args = data.draw(st.fixed_dictionaries(query_params), 'QUERY_ARGS')
 
     body_params = _get_filtered_parameter(endpoint, 'body')
     if body_params:
-        body_args = data.draw(body_params['body'])
+        body_args = data.draw(body_params['body'], 'BODY_ARGS')
     else:
         body_args = None
 
@@ -133,7 +131,7 @@ def swagger_fuzzer(data):
             # Force a request format, swagger ui seems to force json format
             valid_request_body_format = ["application/json"]
 
-        request_body_format = data.draw(st.sampled_from(valid_request_body_format))
+        request_body_format = data.draw(st.sampled_from(valid_request_body_format), 'request_body_format')
 
         request_headers['Content-Type'] = request_body_format
         if request_body_format == 'application/x-www-form-urlencoded':
