@@ -54,7 +54,7 @@ setup(
     tests_require=test_requirements,
     entry_points={
         'console_scripts':  [
-            "swagger-fuzzer = swagger_fuzzer.swagger_fuzzer:swagger_fuzzer"
+            "swagger-fuzzer = swagger_fuzzer.swagger_fuzzer:main"
         ]
     }
 )
