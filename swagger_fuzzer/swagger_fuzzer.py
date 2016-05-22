@@ -21,22 +21,28 @@ parser.add_argument('spec_url', help="The Swagger spec url")
 parser.add_argument('-n', '--number', dest='iterations',
                     default=1000000, type=int,
                     help='Maximum number of iterations (default: 100000)')
+parser.add_argument('-s', '--standard-http-code', dest='http_code',
+                    action='append', type=int,
+                    help='Standards http codes, no need to declare them in '
+                         'swagger spec, default: 200, 404, 405')
 
 
 def main():
     args = parser.parse_args()
-    do(args.spec_url, int(args.iterations))
+    if args.http_code is None:
+        args.http_code = [200, 405, 404]
+    do(args)
 
 
-def do(spec_url, iterations):
-    PARSED_HOST = urlparse(spec_url)
+def do(args_namespace):
+    PARSED_HOST = urlparse(args_namespace.spec_url)
 
-    swagger_spec = requests.get(spec_url)
+    swagger_spec = requests.get(args_namespace.spec_url)
     swagger_spec.raise_for_status()
     SPEC = swagger_spec.json()
 
-    validator = get_validator(SPEC, spec_url)
-    validator.validate_spec(swagger_spec.json(), spec_url)
+    validator = get_validator(SPEC, args_namespace.spec_url)
+    validator.validate_spec(swagger_spec.json(), args_namespace.spec_url)
 
     SPEC_HOST = urlunparse(list(PARSED_HOST)[:2] + [SPEC['basePath']] + ['', '', ''])
 
@@ -66,7 +72,7 @@ def do(spec_url, iterations):
         return CustomTransformation(get_ref).transform(non_converted_params)
 
     @given(data())
-    @settings(max_examples=iterations)
+    @settings(max_examples=args_namespace.iterations)
     def swagger_fuzzer(data):
         endpoint_path = data.draw(st.sampled_from(SPEC['paths'].keys()), 'URL')
         endpoint = SPEC['paths'][endpoint_path]
@@ -124,7 +130,7 @@ def do(spec_url, iterations):
                            headers=request_headers)
 
         for validator in VALIDATORS:
-            validator(SPEC, locals(), result, URL)
+            validator(SPEC, locals(), result, URL, args_namespace)
 
     # Call the function
     swagger_fuzzer()
