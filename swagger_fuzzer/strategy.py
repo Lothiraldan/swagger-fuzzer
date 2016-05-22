@@ -29,7 +29,6 @@ def data():
 
         def draw(self, strategy, name=None):
             result = self.data.draw(strategy)
-            note("{}: {}".format(name, result))
             return result
 
     class DataStrategy(SearchStrategy):

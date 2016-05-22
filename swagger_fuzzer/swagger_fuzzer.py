@@ -7,8 +7,9 @@ from urllib.parse import urlparse, urlunparse
 
 import requests
 import hypothesis.strategies as st
+from requests import Request
 from furl import furl
-from hypothesis import given, settings, assume
+from hypothesis import given, settings, assume, note
 from swagger_spec_validator.util import get_validator
 
 from .swagger_helpers import CustomTransformation
@@ -32,6 +33,22 @@ def main():
     if args.http_code is None:
         args.http_code = [200, 405, 404]
     do(args)
+
+
+def to_curl_command(request):
+    """ Convert a requests preparred request to curl command
+    """
+    command = "curl -i -X {method}{headers} -d '{data}' '{uri}'"
+    method = request.method
+    uri = request.url
+    data = request.body
+    if data is None:
+        data = ''
+    headers = ["{0}: {1}".format(k, v) for k, v in request.headers.items()]
+    headers = " -H ".join(headers)
+    if headers:
+        headers = " -H {} ".format(headers)
+    return command.format(method=method, headers=headers, data=data, uri=uri)
 
 
 def do(args_namespace):
@@ -74,28 +91,28 @@ def do(args_namespace):
     @given(data())
     @settings(max_examples=args_namespace.iterations)
     def swagger_fuzzer(data):
-        endpoint_path = data.draw(st.sampled_from(SPEC['paths'].keys()), 'URL')
+        endpoint_path = data.draw(st.sampled_from(SPEC['paths'].keys()))
         endpoint = SPEC['paths'][endpoint_path]
 
-        method_name = data.draw(st.sampled_from(endpoint.keys()), 'METHOD')
+        method_name = data.draw(st.sampled_from(endpoint.keys()))
         endpoint = endpoint[method_name]
 
         path_params = _get_filtered_parameter(endpoint, 'path')
-        path_args = data.draw(st.fixed_dictionaries(path_params), 'QUERY_STRING')
+        path_args = data.draw(st.fixed_dictionaries(path_params))
 
         query_params = _get_filtered_parameter(endpoint, 'query')
-        query_args = data.draw(st.fixed_dictionaries(query_params), 'QUERY_ARGS')
+        query_args = data.draw(st.fixed_dictionaries(query_params))
 
         body_params = _get_filtered_parameter(endpoint, 'body')
         if body_params:
-            body_args = data.draw(body_params['body'], 'BODY_ARGS')
+            body_args = data.draw(body_params['body'])
         else:
             body_args = None
 
         valid_request_body_format = get_item_path_acceptable_format(endpoint)
 
         request_data = None
-        request_headers = {"X-User": "56e2f82a30781f1d92abeb91"}
+        request_headers = {}
 
         if body_args:
             # no_body_format_declaration(body_args, valid_request_body_format, endpoint)
@@ -126,8 +143,11 @@ def do(args_namespace):
         if query_args:
             URL = URL.add(args=query_args)
 
-        result = s.request(method=method_name, url=URL.url, data=request_data,
-                           headers=request_headers)
+        request = Request(method_name, URL.url, data=request_data,
+                          headers=request_headers).prepare()
+        note("Curl command: {}".format(to_curl_command(request)))
+
+        result = s.send(request)
 
         for validator in VALIDATORS:
             validator(SPEC, locals(), result, URL, args_namespace)
