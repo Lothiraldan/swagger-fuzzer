@@ -49,6 +49,13 @@ If swagger-fuzzer find any problem, it will print you a report, for example:
         raise AssertionError("Response content-type {} is not declared: {}".format(response.headers['Content-Type'], valids))
     AssertionError: Response content-type text/html; charset=ISO-8859-1 is not declared: []
 
+Bugs hunted
+-----------
+
+Swagger-fuzzer really find bugs, here is a non-extensive list of bugs found with swagger-fuzzer:
+
+* https://github.com/pallets/flask/issues/1761, null byte filename crash flask file handling code.
+
 Credits
 ---------
 
