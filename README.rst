@@ -14,7 +14,7 @@ Install swagger-fuzzer via pip:
 
 .. code:: shell
 
-    pip install https://github.com/Lothiraldan/swagger-fuzzer/archive/master.zip
+    pip3 install https://github.com/Lothiraldan/swagger-fuzzer/archive/master.zip
 
 Point it to your swagger specification:
 
